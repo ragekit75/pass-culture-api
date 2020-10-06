@@ -6,6 +6,8 @@ from pcapi.utils.health_checker import read_version_from_file
 @public_api.route("/health/api", methods=["GET"])
 def health_api():
     output = read_version_from_file()
+    print("toto")
+    print("titi")
     return output, 200
 
 
