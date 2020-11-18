@@ -1,9 +1,14 @@
+from flask import redirect, flash, url_for
+from flask_admin import expose
+from flask_admin.babel import gettext
+from flask_admin.form import rules
 from flask_admin.helpers import get_form_data
 from flask_login import current_user
 from wtforms import Form
 from wtforms import SelectField
 from wtforms import StringField
 from wtforms import TextAreaField
+from markupsafe import Markup
 
 from pcapi.admin.base_configuration import BaseAdminView
 from pcapi.connectors import redis
@@ -53,6 +58,7 @@ class OffererAdminView(BaseAdminView):
 
 class UserAdminView(BaseAdminView):
     can_edit = True
+    can_create = True
     column_list = [
         "id",
         "canBookFreeOffers",
@@ -66,23 +72,64 @@ class UserAdminView(BaseAdminView):
         "postalCode",
         "resetPasswordToken",
         "validationToken",
+        "Action User",
     ]
-    column_labels = dict(
-        email="Email",
-        canBookFreeOffers="Peut réserver",
-        firstName="Prénom",
-        lastName="Nom",
-        publicName="Nom d'utilisateur",
-        dateOfBirth="Date de naissance",
-        departementCode="Département",
-        phoneNumber="Numéro de téléphone",
-        postalCode="Code postal",
-        resetPasswordToken="Jeton d'activation et réinitialisation de mot de passe",
-        validationToken="Jeton de validation d'adresse email",
-    )
+    column_labels = {
+        "email": "Email",
+        "canBookFreeOffers": "Peut réserver",
+        "firstName": "Prénom",
+        "lastName": "Nom",
+        "publicName": "Nom d'utilisateur",
+        "dateOfBirth": "Date de naissance",
+        "departementCode": "Département",
+        "phoneNumber": "Numéro de téléphone",
+        "postalCode": "Code postal",
+        "resetPasswordToken": "Jeton d'activation et réinitialisation de mot de passe",
+        "validationToken": "Jeton de validation d'adresse email",
+        "Action User": "Activer/Désactiver l'utilisateur",
+    }
     column_searchable_list = ["id", "publicName", "email", "firstName", "lastName"]
     column_filters = ["postalCode", "canBookFreeOffers"]
     form_columns = ["email", "firstName", "lastName", "publicName", "dateOfBirth", "departementCode", "postalCode"]
+
+    def _format_action_button(view, context, model, name):
+        if model.is_active:
+            action_url = url_for(".disable_user_view")
+            action_text = "Désactiver"
+        else:
+            action_url = url_for(".enable_user_view")
+            action_text = "Activer"
+
+        _html = """
+        <form action="{action_url}" method="POST">
+            <input id="user_id" name="user_id"  type="hidden" value="{user_id}">
+            <button type='submit'>{action_text}</button>
+        </form
+        """.format(
+            action_url=action_url, user_id=model.id, action_text=action_text
+        )
+
+        return Markup(_html)
+
+    column_formatters = {"Action User": _format_action_button}
+
+    @expose("disable", methods=["POST"])
+    def disable_user_view(self):
+
+        return_url = url_for(".index_view")
+
+        print("DISABLING")
+
+        return redirect(return_url)
+
+    @expose("enable", methods=["POST"])
+    def enable_user_view(self):
+
+        return_url = url_for(".index_view")
+
+        print("ENABLING")
+
+        return redirect(return_url)
 
 
 class VenueAdminView(BaseAdminView):
@@ -108,6 +155,22 @@ class FeatureAdminView(BaseAdminView):
     column_list = ["name", "description", "isActive"]
     column_labels = dict(name="Nom", description="Description", isActive="Activé")
     form_columns = ["isActive"]
+
+
+class UserOffererAdminView(BaseAdminView):
+    can_delete = True
+    can_create = True
+    column_list = ["user.email", "offerer.name"]
+    column_labels = {"user.email": "Email utilsateur", "offerer.name": "Nom de l'acteur"}
+    form_create_rules = [
+        # Header and four fields. Email field will go above phone field.
+        # Separate header and few fields
+        rules.Header("User"),
+        rules.Field("user"),
+        rules.Header("Offerer"),
+        rules.Field("offerer"),
+        # String is resolved to form field, so there's no need to explicitly use `rules.Field`
+    ]
 
 
 class BeneficiaryImportView(BaseAdminView):
