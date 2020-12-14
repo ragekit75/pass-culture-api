@@ -103,7 +103,7 @@ class UserAdminView(BaseAdminView):
         _html = """
         <form action="{action_url}" method="POST">
             <input id="user_id" name="user_id"  type="hidden" value="{user_id}">
-            <button type='submit'>{action_text}</button>
+            <button onclick="return confirm('Are you sure you want to delete ?')" type='submit'>{action_text}</button>
         </form
         """.format(
             action_url=action_url, user_id=model.id, action_text=action_text
