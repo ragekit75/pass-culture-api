@@ -39,8 +39,7 @@ def create_beneficiary_from_application(
     generate_reset_token(beneficiary, validity_duration_hours=THIRTY_DAYS_IN_HOURS)
 
     beneficiary.isBeneficiary = True
-    application_id = beneficiary_pre_subscription.application_id
-    deposit = payments_api.create_deposit(beneficiary, f"démarches simplifiées dossier [{application_id}]")
+    deposit = payments_api.create_deposit(beneficiary, beneficiary_pre_subscription.deposit_source)
     beneficiary.deposits = [deposit]
 
     return beneficiary

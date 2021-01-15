@@ -10,6 +10,7 @@ from pcapi.domain.beneficiary_pre_subscription.beneficiary_pre_subscription impo
 from pcapi.domain.user_activation import create_beneficiary_from_application
 from pcapi.domain.user_activation import is_import_status_change_allowed
 from pcapi.models import ImportStatus
+from pcapi.models.beneficiary_import import BeneficiaryImportSources
 from pcapi.models.db import db
 
 
@@ -161,7 +162,7 @@ class CreateBeneficiaryFromApplicationTest:
             application_id=123,
             address=None,
             city=None,
-            source=None,
+            source=BeneficiaryImportSources.demarches_simplifiees.value,
             source_id=None,
         )
         # when

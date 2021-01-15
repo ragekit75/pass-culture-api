@@ -16,6 +16,7 @@ from pcapi.model_creators.generic_creators import create_user
 from pcapi.models import ApiErrors
 from pcapi.models import BeneficiaryImport
 from pcapi.models import ImportStatus
+from pcapi.models.beneficiary_import import BeneficiaryImportSources
 from pcapi.repository import repository
 from pcapi.scripts.beneficiary import remote_import
 from pcapi.scripts.beneficiary.remote_import import parse_beneficiary_information
@@ -241,7 +242,7 @@ class RunTest:
                 raw_department_code="67",
                 address=None,
                 city=None,
-                source=None,
+                source=BeneficiaryImportSources.demarches_simplifiees.value,
                 source_id=None,
             ),
             retry_ids=[],
