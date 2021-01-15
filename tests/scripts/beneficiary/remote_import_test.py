@@ -1,6 +1,7 @@
 from datetime import date
 from datetime import datetime
 from datetime import timedelta
+import logging
 from unittest.mock import ANY
 from unittest.mock import Mock
 from unittest.mock import patch
@@ -14,7 +15,6 @@ from pcapi.core.users import api as users_api
 from pcapi.core.users.models import User
 from pcapi.domain.beneficiary_pre_subscription.beneficiary_pre_subscription import BeneficiaryPreSubscription
 from pcapi.model_creators.generic_creators import create_user
-from pcapi.models import ApiErrors
 from pcapi.models import BeneficiaryImport
 from pcapi.models import ImportStatus
 from pcapi.models.beneficiary_import import BeneficiaryImportSources
@@ -348,14 +348,10 @@ class ProcessBeneficiaryApplicationTest:
         # then
         send_activation_email.assert_called()
 
-    @patch("pcapi.scripts.beneficiary.remote_import.repository")
     @patch("pcapi.scripts.beneficiary.remote_import.send_activation_email")
-    @patch("pcapi.utils.logger.logger.warning")
     @freeze_time("2019-01-01 09:00:00")
     @pytest.mark.usefixtures("db_session")
-    def test_error_is_collected_if_beneficiary_could_not_be_saved(
-        self, warning_logger, send_activation_email, mock_repository, app
-    ):
+    def test_error_is_collected_if_beneficiary_could_not_be_saved(self, send_activation_email, app, caplog):
         # given
         information = BeneficiaryPreSubscription(
             # "department": "93",
@@ -364,7 +360,7 @@ class ProcessBeneficiaryApplicationTest:
             date_of_birth=datetime(2000, 5, 1),
             email="jane.doe@example.com",
             phone_number="0612345678",
-            postal_code="93130",
+            postal_code="baaaaad value",
             application_id=123,
             civility="Mme",
             activity="Étudiant",
@@ -373,19 +369,18 @@ class ProcessBeneficiaryApplicationTest:
             source=BeneficiaryImportSources.demarches_simplifiees.value,
             source_id=None,
         )
-        mock_repository.save.side_effect = [ApiErrors({"postalCode": ["baaaaad value"]})]
 
         # when
         remote_import.process_beneficiary_application(information, retry_ids=[], procedure_id=123456)
 
         # then
         send_activation_email.assert_not_called()
-        warning_logger.assert_called()
+        assert len(caplog.records) == 1
+        assert caplog.records[0].levelno == logging.WARNING
         assert (
-            warning_logger.call_args[0][0]
+            caplog.records[0].msg
             == "[BATCH][REMOTE IMPORT BENEFICIARIES] Could not save application %s, because of error: %s - Procedure %s"
         )
-        assert warning_logger.call_args[0][2].errors == {"postalCode": ["baaaaad value"]}
 
     @patch("pcapi.scripts.beneficiary.remote_import.repository")
     @patch("pcapi.scripts.beneficiary.remote_import.send_activation_email")
