@@ -2,13 +2,14 @@ from datetime import datetime
 from datetime import timedelta
 from decimal import Decimal
 
+from freezegun import freeze_time
 import pytest
 
 from pcapi.core.users import api as users_api
 from pcapi.core.users import models as users_models
 from pcapi.domain.beneficiary_pre_subscription.beneficiary_pre_subscription import BeneficiaryPreSubscription
-from pcapi.domain.user_activation import create_beneficiary_from_application
 from pcapi.domain.user_activation import is_import_status_change_allowed
+from pcapi.infrastructure.repository.beneficiary import beneficiary_pre_subscription_sql_converter
 from pcapi.models import ImportStatus
 from pcapi.models.beneficiary_import import BeneficiaryImportSources
 from pcapi.models.db import db
@@ -54,6 +55,8 @@ class IsImportStatusChangeAllowedTest:
 
 @pytest.mark.usefixtures("db_session")
 class CreateBeneficiaryFromApplicationTest:
+
+    @freeze_time("2019-01-01 09:00:00")
     def test_return_newly_created_user(self):
         # given
         THIRTY_DAYS_FROM_NOW = (datetime.utcnow() + timedelta(days=30)).date()
@@ -70,12 +73,12 @@ class CreateBeneficiaryFromApplicationTest:
             application_id=123,
             address=None,
             city=None,
-            source=None,
+            source=BeneficiaryImportSources.jouve.value,
             source_id=None,
         )
 
         # when
-        beneficiary = create_beneficiary_from_application(beneficiary_information, user=None)
+        beneficiary = beneficiary_pre_subscription_sql_converter.to_model(beneficiary_information, user=None)
 
         # Then
         assert beneficiary.lastName == "Doe"
@@ -95,9 +98,9 @@ class CreateBeneficiaryFromApplicationTest:
         assert beneficiary.civility == "Mme"
         assert beneficiary.hasSeenTutorials == False
 
+    @freeze_time("2019-01-01 09:00:00")
     def test_updates_existing_user(self):
         # given
-        THIRTY_DAYS_FROM_NOW = (datetime.utcnow() + timedelta(days=30)).date()
         beneficiary_information = BeneficiaryPreSubscription(
             raw_department_code="67",
             last_name="Doe",
@@ -111,7 +114,7 @@ class CreateBeneficiaryFromApplicationTest:
             application_id=123,
             address=None,
             city=None,
-            source=None,
+            source=BeneficiaryImportSources.jouve.value,
             source_id=None,
         )
 
@@ -124,7 +127,7 @@ class CreateBeneficiaryFromApplicationTest:
         db.session.flush()
 
         # when
-        beneficiary = create_beneficiary_from_application(beneficiary_information, user=user)
+        beneficiary = beneficiary_pre_subscription_sql_converter.to_model(beneficiary_information, user=user)
         db.session.add(beneficiary)
         db.session.flush()
 
@@ -141,12 +144,12 @@ class CreateBeneficiaryFromApplicationTest:
         assert beneficiary.isBeneficiary == True
         assert beneficiary.isAdmin == False
         assert beneficiary.password is not None
-        assert beneficiary.resetPasswordToken is not None
-        assert beneficiary.resetPasswordTokenValidityLimit.date() == THIRTY_DAYS_FROM_NOW
+        assert beneficiary.resetPasswordToken is None
         assert beneficiary.activity == "Lycéen"
         assert beneficiary.civility == "Mme"
         assert beneficiary.hasSeenTutorials == False
 
+    @freeze_time("2019-01-01 09:00:00")
     def test_a_deposit_is_made_for_the_new_beneficiary(self):
         # given
         beneficiary_information = BeneficiaryPreSubscription(
@@ -166,7 +169,7 @@ class CreateBeneficiaryFromApplicationTest:
             source_id=None,
         )
         # when
-        beneficiary = create_beneficiary_from_application(beneficiary_information, user=None)
+        beneficiary = beneficiary_pre_subscription_sql_converter.to_model(beneficiary_information, user=None)
 
         # then
         assert len(beneficiary.deposits) == 1

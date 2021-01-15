@@ -7,13 +7,14 @@ from typing import Optional
 
 from pcapi import settings
 from pcapi.connectors.api_demarches_simplifiees import get_application_details
+from pcapi.core.users.exceptions import NotEligible
 from pcapi.core.users.models import User
 from pcapi.domain.beneficiary_pre_subscription.beneficiary_pre_subscription import BeneficiaryPreSubscription
 from pcapi.domain.beneficiary_pre_subscription.beneficiary_pre_subscription_validator import get_beneficiary_duplicates
 from pcapi.domain.demarches_simplifiees import get_closed_application_ids_for_demarche_simplifiee
-from pcapi.domain.user_activation import create_beneficiary_from_application
 from pcapi.domain.user_emails import send_accepted_as_beneficiary_email
 from pcapi.domain.user_emails import send_activation_email
+from pcapi.infrastructure.repository.beneficiary import beneficiary_pre_subscription_sql_converter
 from pcapi.models import ApiErrors
 from pcapi.models import ImportStatus
 from pcapi.models.beneficiary_import import BeneficiaryImportSources
@@ -163,10 +164,12 @@ def _process_creation(
     procedure_id: int,
     user: Optional[User] = None,
 ) -> None:
-    new_beneficiary = create_beneficiary_from_application(pre_subscription, user=user)
     try:
+        new_beneficiary = beneficiary_pre_subscription_sql_converter.to_model(
+            pre_subscription, user=user, import_details=False
+        )
         repository.save(new_beneficiary)
-    except ApiErrors as api_errors:
+    except (ApiErrors, NotEligible) as api_errors:
         logger.warning(
             "[BATCH][REMOTE IMPORT BENEFICIARIES] Could not save application %s, because of error: %s - Procedure %s",
             pre_subscription.application_id,
