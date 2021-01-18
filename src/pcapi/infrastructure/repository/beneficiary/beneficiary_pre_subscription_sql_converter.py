@@ -13,7 +13,7 @@ from pcapi.scripts.beneficiary import THIRTY_DAYS_IN_HOURS
 def to_model(
     beneficiary_pre_subscription: BeneficiaryPreSubscription,
     user: Optional[User] = None,
-    import_details=True,
+    import_details: bool = True,
 ) -> User:
     if not user:
         beneficiary = User()
@@ -39,7 +39,8 @@ def to_model(
 
     beneficiary = users_api.activate_beneficiary(beneficiary, beneficiary_pre_subscription.deposit_source)
     if import_details:
-        users_api.attach_beneficiary_import_details(beneficiary, beneficiary_pre_subscription)
+        beneficiary_import = users_api.beneficiary_import_succeeded(beneficiary_pre_subscription)
+        beneficiary.beneficiaryImports = [beneficiary_import]
 
     return beneficiary
 
