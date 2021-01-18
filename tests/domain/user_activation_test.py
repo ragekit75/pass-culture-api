@@ -73,7 +73,7 @@ class CreateBeneficiaryFromApplicationTest:
             application_id=123,
             address=None,
             city=None,
-            source=BeneficiaryImportSources.jouve.value,
+            source=BeneficiaryImportSources.jouve,
             source_id=None,
         )
 
@@ -114,7 +114,7 @@ class CreateBeneficiaryFromApplicationTest:
             application_id=123,
             address=None,
             city=None,
-            source=BeneficiaryImportSources.jouve.value,
+            source=BeneficiaryImportSources.jouve,
             source_id=None,
         )
 
@@ -165,7 +165,7 @@ class CreateBeneficiaryFromApplicationTest:
             application_id=123,
             address=None,
             city=None,
-            source=BeneficiaryImportSources.demarches_simplifiees.value,
+            source=BeneficiaryImportSources.demarches_simplifiees,
             source_id=None,
         )
         # when

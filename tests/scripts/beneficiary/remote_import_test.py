@@ -243,7 +243,7 @@ class RunTest:
                 raw_department_code="67",
                 address=None,
                 city=None,
-                source=BeneficiaryImportSources.demarches_simplifiees.value,
+                source=BeneficiaryImportSources.demarches_simplifiees,
                 source_id=None,
             ),
             retry_ids=[],
@@ -272,7 +272,7 @@ class ProcessBeneficiaryApplicationTest:
             activity="Étudiant",
             address=None,
             city=None,
-            source=BeneficiaryImportSources.demarches_simplifiees.value,
+            source=BeneficiaryImportSources.demarches_simplifiees,
             source_id=None,
         )
 
@@ -306,7 +306,7 @@ class ProcessBeneficiaryApplicationTest:
             activity="Étudiant",
             address=None,
             city=None,
-            source=BeneficiaryImportSources.demarches_simplifiees.value,
+            source=BeneficiaryImportSources.demarches_simplifiees,
             source_id=None,
         )
 
@@ -338,7 +338,7 @@ class ProcessBeneficiaryApplicationTest:
             activity="Étudiant",
             address=None,
             city=None,
-            source=BeneficiaryImportSources.demarches_simplifiees.value,
+            source=BeneficiaryImportSources.demarches_simplifiees,
             source_id=None,
         )
 
@@ -366,7 +366,7 @@ class ProcessBeneficiaryApplicationTest:
             activity="Étudiant",
             address=None,
             city=None,
-            source=BeneficiaryImportSources.demarches_simplifiees.value,
+            source=BeneficiaryImportSources.demarches_simplifiees,
             source_id=None,
         )
 
@@ -401,7 +401,7 @@ class ProcessBeneficiaryApplicationTest:
             activity="Étudiant",
             address=None,
             city=None,
-            source=BeneficiaryImportSources.demarches_simplifiees.value,
+            source=BeneficiaryImportSources.demarches_simplifiees,
             source_id=None,
         )
         existing_user = create_user(date_of_birth=datetime(2000, 5, 1), first_name="Jane", last_name="Doe")
@@ -434,7 +434,7 @@ class ProcessBeneficiaryApplicationTest:
             activity="Étudiant",
             address=None,
             city=None,
-            source=BeneficiaryImportSources.demarches_simplifiees.value,
+            source=BeneficiaryImportSources.demarches_simplifiees,
             source_id=None,
         )
         existing_user = create_user(date_of_birth=datetime(2000, 5, 1), first_name="Jane", last_name="Doe")
@@ -467,7 +467,7 @@ class ProcessBeneficiaryApplicationTest:
             activity="Étudiant",
             address=None,
             city=None,
-            source=BeneficiaryImportSources.demarches_simplifiees.value,
+            source=BeneficiaryImportSources.demarches_simplifiees,
             source_id=None,
         )
         mock_get_beneficiary_duplicates.return_value = [create_user(idx=11), create_user(idx=22)]
