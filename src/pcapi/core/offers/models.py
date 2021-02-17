@@ -80,6 +80,8 @@ class Stock(PcObject, Model, ProvidableMixin, SoftDeletableMixin, VersionedMixin
 
     quantity = Column(Integer, nullable=True)
 
+    bookedQuantity = Column(Integer, nullable=True)
+
     bookingLimitDatetime = Column(DateTime, nullable=True)
 
     @property

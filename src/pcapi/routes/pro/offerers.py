@@ -116,13 +116,11 @@ def get_venue_stats(humanized_venue_id: str) -> GetStatsResponseModel:
     venue_id = dehumanize(humanized_venue_id)
 
     offers = Offer.query \
-        .join(Venue) \
-        .filter(Venue.id == venue_id) \
+        .filter(Offer.venueId == venue_id) \
         .count()
 
     offers_sold_out = Offer.query \
-        .join(Venue) \
-        .filter(Venue.id == venue_id) \
+        .filter(Offer.venueId == venue_id) \
         .outerjoin(Stock, and_(Offer.id == Stock.offerId, not_(Stock.isSoftDeleted.is_(True)))) \
         .filter(or_(Stock.bookingLimitDatetime.is_(None), Stock.bookingLimitDatetime >= datetime.utcnow())) \
         .filter(or_(Stock.id.is_(None), not_(Stock.quantity.is_(None)))) \
@@ -135,8 +133,36 @@ def get_venue_stats(humanized_venue_id: str) -> GetStatsResponseModel:
     bookings = Booking.query \
         .join(Stock) \
         .join(Offer) \
-        .join(Venue) \
-        .filter(venue_id == Venue.id) \
+        .filter(venue_id == Offer.venueId) \
+        .count()
+
+    return GetStatsResponseModel(offersActive=offers, bookingsCurrent=bookings, bookingsValidated=bookings, offersSoldOut=offers_sold_out)
+
+
+
+@private_api.route("/venues/<humanized_venue_id>/stats-with-perf", methods=["GET"])
+@login_required
+@spectree_serialize(response_model=GetStatsResponseModel)
+def get_venue_stats_with_perf(humanized_venue_id: str) -> GetStatsResponseModel:
+    venue_id = dehumanize(humanized_venue_id)
+
+    offers = Offer.query \
+        .filter(Offer.venueId == venue_id) \
+        .count()
+
+    offers_sold_out = Offer.query \
+        .filter(Offer.venueId == venue_id) \
+        .outerjoin(Stock, and_(Offer.id == Stock.offerId, not_(Stock.isSoftDeleted.is_(True)))) \
+        .filter(or_(Stock.bookingLimitDatetime.is_(None), Stock.bookingLimitDatetime >= datetime.utcnow())) \
+        .filter(or_(Stock.id.is_(None), not_(Stock.quantity.is_(None)))) \
+        .filter(Stock.quantity == Stock.bookedQuantity) \
+        .distinct(Offer.id) \
+        .count()
+
+    bookings = Booking.query \
+        .join(Stock) \
+        .join(Offer) \
+        .filter(venue_id == Offer.venueId) \
         .count()
 
     return GetStatsResponseModel(offersActive=offers, bookingsCurrent=bookings, bookingsValidated=bookings, offersSoldOut=offers_sold_out)
