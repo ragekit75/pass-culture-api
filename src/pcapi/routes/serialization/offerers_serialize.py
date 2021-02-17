@@ -4,7 +4,7 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from pcapi.serialization.utils import humanize_field
+from pcapi.serialization.utils import humanize_field, to_camel
 from pcapi.utils.date import format_into_utc_date
 
 
@@ -42,6 +42,16 @@ class GetOffererVenueResponseModel(BaseModel):
     class Config:
         orm_mode = True
         json_encoders = {datetime: format_into_utc_date}
+
+
+class GetStatsResponseModel(BaseModel):
+    offers_active: int
+    bookings_current: int
+    bookings_validated: int
+    offers_sold_out: int
+
+    class Config:
+        alias_generator = to_camel
 
 
 class GetOffererResponseModel(BaseModel):

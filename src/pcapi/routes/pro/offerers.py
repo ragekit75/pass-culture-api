@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List
 
 from flask import current_app as app
@@ -5,7 +6,11 @@ from flask import jsonify
 from flask import request
 from flask_login import current_user
 from flask_login import login_required
+from sqlalchemy import and_, or_, not_
+from sqlalchemy.sql.functions import coalesce, func
 
+from pcapi.core.bookings.models import Booking
+from pcapi.core.offers.models import Offer, Stock
 from pcapi.core.offerers.api import create_digital_venue
 from pcapi.core.offerers.repository import get_all
 from pcapi.core.users.models import User
@@ -15,12 +20,13 @@ from pcapi.domain.user_emails import send_pro_user_waiting_for_validation_by_adm
 from pcapi.flask_app import private_api
 from pcapi.infrastructure.container import list_offerers_for_pro_user
 from pcapi.models import ApiErrors
+from pcapi.models import Venue
 from pcapi.models import Offerer
 from pcapi.models import UserOfferer
 from pcapi.repository import repository
 from pcapi.repository.offerer_queries import find_by_siren
 from pcapi.routes.serialization import as_dict
-from pcapi.routes.serialization.offerers_serialize import GetOffererNameResponseModel
+from pcapi.routes.serialization.offerers_serialize import GetOffererNameResponseModel, GetStatsResponseModel
 from pcapi.routes.serialization.offerers_serialize import GetOffererResponseModel
 from pcapi.routes.serialization.offerers_serialize import GetOfferersNamesQueryModel
 from pcapi.routes.serialization.offerers_serialize import GetOfferersNamesResponseModel
@@ -101,6 +107,39 @@ def get_offerer(offerer_id: str) -> GetOffererResponseModel:
     offerer = load_or_404(Offerer, offerer_id)
 
     return GetOffererResponseModel.from_orm(offerer)
+
+
+@private_api.route("/venues/<humanized_venue_id>/stats", methods=["GET"])
+@login_required
+@spectree_serialize(response_model=GetStatsResponseModel)
+def get_venue_stats(humanized_venue_id: str) -> GetStatsResponseModel:
+    venue_id = dehumanize(humanized_venue_id)
+
+    offers = Offer.query \
+        .join(Venue) \
+        .filter(Venue.id == venue_id) \
+        .count()
+
+    offers_sold_out = Offer.query \
+        .join(Venue) \
+        .filter(Venue.id == venue_id) \
+        .outerjoin(Stock, and_(Offer.id == Stock.offerId, not_(Stock.isSoftDeleted.is_(True)))) \
+        .filter(or_(Stock.bookingLimitDatetime.is_(None), Stock.bookingLimitDatetime >= datetime.utcnow())) \
+        .filter(or_(Stock.id.is_(None), not_(Stock.quantity.is_(None)))) \
+        .outerjoin(Booking, and_(Stock.id == Booking.stockId, Booking.isCancelled.is_(False))) \
+        .group_by(Offer.id) \
+        .having(coalesce(func.sum(Stock.quantity), 0) == coalesce(func.sum(Booking.quantity), 0)) \
+        .distinct(Offer.id) \
+        .count()
+
+    bookings = Booking.query \
+        .join(Stock) \
+        .join(Offer) \
+        .join(Venue) \
+        .filter(venue_id == Venue.id) \
+        .count()
+
+    return GetStatsResponseModel(offersActive=offers, bookingsCurrent=bookings, bookingsValidated=bookings, offersSoldOut=offers_sold_out)
 
 
 # @debt api-migration
