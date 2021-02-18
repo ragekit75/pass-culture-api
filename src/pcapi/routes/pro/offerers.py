@@ -115,17 +115,16 @@ def get_offerer(offerer_id: str) -> GetOffererResponseModel:
 @spectree_serialize(response_model=GetStatsResponseModel)
 def get_venue_stats(humanized_venue_id: str) -> GetStatsResponseModel:
     venue_id = dehumanize(humanized_venue_id)
-    start_time=datetime.utcnow()
+    start_time = datetime.utcnow()
 
     logger.info('[STATS] offers query begin')
     offers = Offer.query \
         .filter(Offer.venueId == venue_id) \
         .count()
-    offers_time=datetime.utcnow()
-    elapsed_time = offers_time-start_time
+    offers_time = datetime.utcnow()
+    elapsed_time = offers_time - start_time
     elapsed_time_in_millis = round(elapsed_time.total_seconds() * 1000, 2)
     logger.info('[STATS] offers query duration %d', elapsed_time_in_millis)
-
 
     logger.info('[STATS] sold_out query begin')
     offers_sold_out = Offer.query \
@@ -138,8 +137,8 @@ def get_venue_stats(humanized_venue_id: str) -> GetStatsResponseModel:
         .having(coalesce(func.sum(Stock.quantity), 0) == coalesce(func.sum(Booking.quantity), 0)) \
         .distinct(Offer.id) \
         .count()
-    sold_out_time=datetime.utcnow()
-    elapsed_time = sold_out_time-offers_time
+    sold_out_time = datetime.utcnow()
+    elapsed_time = sold_out_time - offers_time
     elapsed_time_in_millis = round(elapsed_time.total_seconds() * 1000, 2)
     logger.info('[STATS] sold_out query duration %d', elapsed_time_in_millis)
 
@@ -149,8 +148,8 @@ def get_venue_stats(humanized_venue_id: str) -> GetStatsResponseModel:
         .join(Offer) \
         .filter(venue_id == Offer.venueId) \
         .count()
-    bookings_time=datetime.utcnow()
-    elapsed_time = bookings_time-sold_out_time
+    bookings_time = datetime.utcnow()
+    elapsed_time = bookings_time - sold_out_time
     elapsed_time_in_millis = round(elapsed_time.total_seconds() * 1000, 2)
     logger.info('[STATS] bookings query duration %d', elapsed_time_in_millis)
 
@@ -162,14 +161,14 @@ def get_venue_stats(humanized_venue_id: str) -> GetStatsResponseModel:
 @spectree_serialize(response_model=GetStatsResponseModel)
 def get_venue_stats_with_perf(humanized_venue_id: str) -> GetStatsResponseModel:
     venue_id = dehumanize(humanized_venue_id)
-    start_time=datetime.utcnow()
+    start_time = datetime.utcnow()
 
     logger.info('[PERF] offers query begin')
     offers = Offer.query \
         .filter(Offer.venueId == venue_id) \
         .count()
-    offers_time=datetime.utcnow()
-    elapsed_time = offers_time-start_time
+    offers_time = datetime.utcnow()
+    elapsed_time = offers_time - start_time
     elapsed_time_in_millis = round(elapsed_time.total_seconds() * 1000, 2)
     logger.info('[PERF] offers query duration %d', elapsed_time_in_millis)
 
@@ -179,11 +178,11 @@ def get_venue_stats_with_perf(humanized_venue_id: str) -> GetStatsResponseModel:
         .outerjoin(Stock, and_(Offer.id == Stock.offerId, not_(Stock.isSoftDeleted.is_(True)))) \
         .filter(or_(Stock.bookingLimitDatetime.is_(None), Stock.bookingLimitDatetime >= datetime.utcnow())) \
         .filter(or_(Stock.id.is_(None), not_(Stock.quantity.is_(None)))) \
-        .filter(Stock.quantity == Stock.bookedQuantity) \
-        .distinct(Offer.id) \
+        .group_by(Offer.id) \
+        .having(coalesce(func.sum(Stock.quantity), 0) == coalesce(func.sum(Stock.bookedQuantity), 0)) \
         .count()
-    sold_out_time=datetime.utcnow()
-    elapsed_time = sold_out_time-offers_time
+    sold_out_time = datetime.utcnow()
+    elapsed_time = sold_out_time - offers_time
     elapsed_time_in_millis = round(elapsed_time.total_seconds() * 1000, 2)
     logger.info('[PERF] sold_out query duration %d', elapsed_time_in_millis)
 
@@ -193,8 +192,8 @@ def get_venue_stats_with_perf(humanized_venue_id: str) -> GetStatsResponseModel:
         .join(Offer) \
         .filter(Offer.venueId == venue_id) \
         .scalar()
-    bookings_time=datetime.utcnow()
-    elapsed_time = bookings_time-sold_out_time
+    bookings_time = datetime.utcnow()
+    elapsed_time = bookings_time - sold_out_time
     elapsed_time_in_millis = round(elapsed_time.total_seconds() * 1000, 2)
     logger.info('[PERF] bookings query duration %d', elapsed_time_in_millis)
 
