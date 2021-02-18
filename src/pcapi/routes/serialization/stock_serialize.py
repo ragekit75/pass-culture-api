@@ -15,6 +15,7 @@ class StockResponseModel(BaseModel):
     beginningDatetime: Optional[datetime]
     bookingLimitDatetime: Optional[datetime]
     bookingsQuantity: int
+    bookedQuantity: Optional[int]
     dateCreated: datetime
     dateModified: datetime
     id: str
