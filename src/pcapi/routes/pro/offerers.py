@@ -139,7 +139,6 @@ def get_venue_stats(humanized_venue_id: str) -> GetStatsResponseModel:
     return GetStatsResponseModel(offersActive=offers, bookingsCurrent=bookings, bookingsValidated=bookings, offersSoldOut=offers_sold_out)
 
 
-
 @private_api.route("/venues/<humanized_venue_id>/stats-with-perf", methods=["GET"])
 @login_required
 @spectree_serialize(response_model=GetStatsResponseModel)
@@ -159,11 +158,11 @@ def get_venue_stats_with_perf(humanized_venue_id: str) -> GetStatsResponseModel:
         .distinct(Offer.id) \
         .count()
 
-    bookings = Booking.query \
-        .join(Stock) \
+    bookings = Stock.query \
+        .with_entities(func.sum(Stock.bookedQuantity)) \
         .join(Offer) \
-        .filter(venue_id == Offer.venueId) \
-        .count()
+        .filter(Offer.venueId == venue_id) \
+        .scalar()
 
     return GetStatsResponseModel(offersActive=offers, bookingsCurrent=bookings, bookingsValidated=bookings, offersSoldOut=offers_sold_out)
 
