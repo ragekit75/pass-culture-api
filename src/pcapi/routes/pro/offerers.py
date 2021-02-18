@@ -39,6 +39,7 @@ from pcapi.utils.rest import check_user_has_access_to_offerer
 from pcapi.utils.rest import expect_json_data
 from pcapi.utils.rest import load_or_404
 from pcapi.utils.rest import login_or_api_key_required
+from pcapi.utils.logger import logger
 
 
 def get_dict_offerer(offerer: Offerer) -> dict:
@@ -114,11 +115,19 @@ def get_offerer(offerer_id: str) -> GetOffererResponseModel:
 @spectree_serialize(response_model=GetStatsResponseModel)
 def get_venue_stats(humanized_venue_id: str) -> GetStatsResponseModel:
     venue_id = dehumanize(humanized_venue_id)
+    start_time=datetime.utcnow()
 
+    logger.info('[STATS] offers query begin')
     offers = Offer.query \
         .filter(Offer.venueId == venue_id) \
         .count()
+    offers_time=datetime.utcnow()
+    elapsed_time = offers_time-start_time
+    elapsed_time_in_millis = round(elapsed_time.total_seconds() * 1000, 2)
+    logger.info('[STATS] offers query duration %d', elapsed_time_in_millis)
 
+
+    logger.info('[STATS] sold_out query begin')
     offers_sold_out = Offer.query \
         .filter(Offer.venueId == venue_id) \
         .outerjoin(Stock, and_(Offer.id == Stock.offerId, not_(Stock.isSoftDeleted.is_(True)))) \
@@ -129,12 +138,21 @@ def get_venue_stats(humanized_venue_id: str) -> GetStatsResponseModel:
         .having(coalesce(func.sum(Stock.quantity), 0) == coalesce(func.sum(Booking.quantity), 0)) \
         .distinct(Offer.id) \
         .count()
+    sold_out_time=datetime.utcnow()
+    elapsed_time = sold_out_time-offers_time
+    elapsed_time_in_millis = round(elapsed_time.total_seconds() * 1000, 2)
+    logger.info('[STATS] sold_out query duration %d', elapsed_time_in_millis)
 
+    logger.info('[STATS] bookings query begin')
     bookings = Booking.query \
         .join(Stock) \
         .join(Offer) \
         .filter(venue_id == Offer.venueId) \
         .count()
+    bookings_time=datetime.utcnow()
+    elapsed_time = bookings_time-sold_out_time
+    elapsed_time_in_millis = round(elapsed_time.total_seconds() * 1000, 2)
+    logger.info('[STATS] bookings query duration %d', elapsed_time_in_millis)
 
     return GetStatsResponseModel(offersActive=offers, bookingsCurrent=bookings, bookingsValidated=bookings, offersSoldOut=offers_sold_out)
 
@@ -144,11 +162,18 @@ def get_venue_stats(humanized_venue_id: str) -> GetStatsResponseModel:
 @spectree_serialize(response_model=GetStatsResponseModel)
 def get_venue_stats_with_perf(humanized_venue_id: str) -> GetStatsResponseModel:
     venue_id = dehumanize(humanized_venue_id)
+    start_time=datetime.utcnow()
 
+    logger.info('[PERF] offers query begin')
     offers = Offer.query \
         .filter(Offer.venueId == venue_id) \
         .count()
+    offers_time=datetime.utcnow()
+    elapsed_time = offers_time-start_time
+    elapsed_time_in_millis = round(elapsed_time.total_seconds() * 1000, 2)
+    logger.info('[PERF] offers query duration %d', elapsed_time_in_millis)
 
+    logger.info('[PERF] sold_out query begin')
     offers_sold_out = Offer.query \
         .filter(Offer.venueId == venue_id) \
         .outerjoin(Stock, and_(Offer.id == Stock.offerId, not_(Stock.isSoftDeleted.is_(True)))) \
@@ -157,12 +182,21 @@ def get_venue_stats_with_perf(humanized_venue_id: str) -> GetStatsResponseModel:
         .filter(Stock.quantity == Stock.bookedQuantity) \
         .distinct(Offer.id) \
         .count()
+    sold_out_time=datetime.utcnow()
+    elapsed_time = sold_out_time-offers_time
+    elapsed_time_in_millis = round(elapsed_time.total_seconds() * 1000, 2)
+    logger.info('[PERF] sold_out query duration %d', elapsed_time_in_millis)
 
+    logger.info('[PERF] bookings query begin')
     bookings = Stock.query \
         .with_entities(func.sum(Stock.bookedQuantity)) \
         .join(Offer) \
         .filter(Offer.venueId == venue_id) \
         .scalar()
+    bookings_time=datetime.utcnow()
+    elapsed_time = bookings_time-sold_out_time
+    elapsed_time_in_millis = round(elapsed_time.total_seconds() * 1000, 2)
+    logger.info('[PERF] bookings query duration %d', elapsed_time_in_millis)
 
     return GetStatsResponseModel(offersActive=offers, bookingsCurrent=bookings, bookingsValidated=bookings, offersSoldOut=offers_sold_out)
 
