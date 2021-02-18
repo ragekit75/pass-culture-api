@@ -173,14 +173,13 @@ def get_venue_stats_with_perf(humanized_venue_id: str) -> GetStatsResponseModel:
     logger.info('[PERF] offers query duration %d', elapsed_time_in_millis)
 
     logger.info('[PERF] sold_out query begin')
-    offers_sold_out = Offer.query \
+    offers_non_sold_out = Offer.query \
         .filter(Offer.venueId == venue_id) \
-        .outerjoin(Stock, and_(Offer.id == Stock.offerId, not_(Stock.isSoftDeleted.is_(True)))) \
+        .join(Stock, and_(Offer.id == Stock.offerId, not_(Stock.isSoftDeleted.is_(True)))) \
         .filter(or_(Stock.bookingLimitDatetime.is_(None), Stock.bookingLimitDatetime >= datetime.utcnow())) \
-        .filter(or_(Stock.id.is_(None), not_(Stock.quantity.is_(None)))) \
-        .group_by(Offer.id) \
-        .having(coalesce(func.sum(Stock.quantity), 0) == coalesce(func.sum(Stock.bookedQuantity), 0)) \
+        .filter(or_(Stock.quantity > Stock.bookedQuantity, Stock.quantity.is_(None))) \
         .count()
+    offers_sold_out = offers - offers_non_sold_out
     sold_out_time = datetime.utcnow()
     elapsed_time = sold_out_time - offers_time
     elapsed_time_in_millis = round(elapsed_time.total_seconds() * 1000, 2)
