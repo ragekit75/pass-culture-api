@@ -13,7 +13,6 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.functions import coalesce
 
-from pcapi.core.bookings.models import Booking
 from pcapi.core.users.models import User
 from pcapi.domain.pro_offers.paginated_offers_recap import PaginatedOffersRecap
 from pcapi.infrastructure.repository.pro_offers.paginated_offers_recap_domain_converter import to_domain
@@ -65,7 +64,7 @@ def get_paginated_offers_for_filters(
 
     query = (
         query.options(joinedload(Offer.venue).joinedload(Venue.managingOfferer))
-        .options(joinedload(Offer.stocks).joinedload(Stock.bookings))
+        .options(joinedload(Offer.stocks))
         .options(joinedload(Offer.mediations))
         .options(joinedload(Offer.product))
         .order_by(Offer.id.desc())
@@ -161,12 +160,11 @@ def _filter_by_status(query: Query, datetime_now: datetime, status: str) -> Quer
             .join(Stock)
             .filter(Stock.isSoftDeleted.is_(False))
             .filter(or_(Stock.bookingLimitDatetime.is_(None), Stock.bookingLimitDatetime >= datetime_now))
-            .outerjoin(Booking, and_(Stock.id == Booking.stockId, Booking.isCancelled.is_(False)))
             .group_by(Offer.id, Stock.id)
             .having(
                 or_(
                     Stock.quantity.is_(None),
-                    Stock.quantity != coalesce(func.sum(Booking.quantity), 0),
+                    Stock.quantity != Stock.bookedQuantity,
                 )
             )
         )
@@ -176,9 +174,8 @@ def _filter_by_status(query: Query, datetime_now: datetime, status: str) -> Quer
             .outerjoin(Stock, and_(Offer.id == Stock.offerId, not_(Stock.isSoftDeleted.is_(True))))
             .filter(or_(Stock.bookingLimitDatetime.is_(None), Stock.bookingLimitDatetime >= datetime_now))
             .filter(or_(Stock.id.is_(None), not_(Stock.quantity.is_(None))))
-            .outerjoin(Booking, and_(Stock.id == Booking.stockId, Booking.isCancelled.is_(False)))
             .group_by(Offer.id)
-            .having(coalesce(func.sum(Stock.quantity), 0) == coalesce(func.sum(Booking.quantity), 0))
+            .having(coalesce(func.sum(Stock.quantity), 0) == coalesce(func.sum(Stock.bookedQuantity), 0))
         )
     elif status == EXPIRED_STATUS:
         query = (
@@ -229,9 +226,8 @@ def get_offers_map_by_id_at_providers(id_at_providers: List[str]) -> Dict[str, i
 def get_stocks_by_id_at_providers(id_at_providers: List[str]) -> Dict:
     stocks = (
         Stock.query.filter(Stock.idAtProviders.in_(id_at_providers))
-        .outerjoin(Booking, and_(Stock.id == Booking.stockId, Booking.isCancelled.is_(False)))
         .group_by(Stock.id)
-        .with_entities(Stock.id, Stock.idAtProviders, coalesce(func.sum(Booking.quantity), 0))
+        .with_entities(Stock.id, Stock.idAtProviders, coalesce(func.sum(Stock.bookedQuantity), 0))
         .all()
     )
     return {

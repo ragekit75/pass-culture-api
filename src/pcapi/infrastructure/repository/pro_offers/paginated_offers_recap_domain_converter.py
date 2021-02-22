@@ -41,4 +41,8 @@ def _offer_recap_to_domain(offer: Offer) -> OfferRecap:
 
 
 def _stock_serializer(stock: Stock) -> Dict:
-    return {"identifier": Identifier(stock.id), "remaining_quantity": stock.remainingQuantity}
+    if stock.quantity is None:
+        remaining_quantity = "unlimited"
+    else:
+        remaining_quantity = stock.quantity - stock.bookedQuantity
+    return {"identifier": Identifier(stock.id), "remaining_quantity": remaining_quantity}
