@@ -19,7 +19,9 @@ from pcapi.repository import feature_queries
 from pcapi.repository import repository
 from pcapi.repository.iris_venues_queries import delete_venue_from_iris_venues
 from pcapi.routes.serialization import as_dict
+from pcapi.routes.serialization.venues_serialize import VenueStatsResponseModel
 from pcapi.routes.serialization.venues_serialize import serialize_venues_with_offerer_name
+from pcapi.serialization.decorator import spectree_serialize
 from pcapi.use_cases.create_venue import create_venue
 from pcapi.utils.human_ids import dehumanize
 from pcapi.utils.includes import OFFER_INCLUDES
@@ -115,3 +117,10 @@ def deactivate_venue_offers(venue_id):
     if feature_queries.is_active(FeatureToggle.SYNCHRONIZE_ALGOLIA):
         redis.add_venue_id(client=app.redis_client, venue_id=venue.id)
     return jsonify([as_dict(offer, includes=OFFER_INCLUDES) for offer in deactivated_offers]), 200
+
+
+@private_api.route("/venues/<venue_id>/stats", methods=["GET"])
+@login_required
+@spectree_serialize(on_success_status=200, response_model=VenueStatsResponseModel)
+def get_stats(venue_id: str) -> VenueStatsResponseModel:
+    return VenueStatsResponseModel(activeBookingsCount=123)
