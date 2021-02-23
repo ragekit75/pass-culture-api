@@ -23,6 +23,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import expression
+from sqlalchemy.sql.sqltypes import Integer
 
 from pcapi import settings
 from pcapi.core.bookings.models import Booking
@@ -30,6 +31,7 @@ from pcapi.core.offers.models import Stock
 from pcapi.core.users import constants
 from pcapi.models.db import Model
 from pcapi.models.db import db
+from pcapi.models.deactivable_mixin import DeactivableMixin
 from pcapi.models.deposit import Deposit
 from pcapi.models.needs_validation_mixin import NeedsValidationMixin
 from pcapi.models.pc_object import PcObject
@@ -49,7 +51,7 @@ class TokenType(enum.Enum):
     ID_CHECK = "id-check"
 
 
-class Token(PcObject, Model):
+class Token(PcObject, Model, DeactivableMixin):
     __tablename__ = "token"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
@@ -58,13 +60,13 @@ class Token(PcObject, Model):
 
     user = relationship("User", foreign_keys=[userId], backref="tokens")
 
-    value = Column(String, index=True, unique=True, nullable=False)
+    value = Column(Integer, nullable=False)
 
-    type = Column(Enum(TokenType, create_constraint=False), nullable=False)
+    type = Column(Enum(TokenType, create_constraint=False), index=True, nullable=False)
 
-    creationDate = Column(DateTime, nullable=False, server_default=func.now())
+    creationDate = Column(DateTime, nullable=True)
 
-    expirationDate = Column(DateTime, nullable=True)
+    maturationDate = Column(DateTime, nullable=True)
 
 
 def _hash_password_with_bcrypt(clear_text: str) -> bytes:
