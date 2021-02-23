@@ -99,7 +99,7 @@ def log_request_details(response: flask.wrappers.Response) -> flask.wrappers.Res
         "size": response.headers.get("Content-Length", type=int),
     }
 
-    json_logger.info("request details", extra=request_data)
+    json_logger.info(f"Request details for {request.path}", extra=request_data)
 
     return response
 
