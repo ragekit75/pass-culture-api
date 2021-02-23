@@ -36,3 +36,21 @@ class OVHBackend(BaseBackend):
         except Exception as exc:
             logger.exception("An error has occured while trying to delete file on OVH bucket: %s", exc)
             raise exc
+    def get_container(
+        self,
+        container_name: Optional[str] = settings.SWIFT_BUCKET_NAME,
+        marker: str = None,
+        end_marker: str = None,
+        full_listing: bool = True,
+    ) -> tuple:
+        try:
+            response = self.swift_con().get_container(
+                container=container_name,
+                marker=marker,
+                end_marker=end_marker,
+                full_listing=full_listing,
+            )
+            return response
+        except Exception as exc:
+            logger.exception("An error has occured while trying to get container on OVH bucket: %s", exc)
+            raise exc
