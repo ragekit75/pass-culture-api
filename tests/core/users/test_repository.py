@@ -1,3 +1,7 @@
+from datetime import date
+from datetime import datetime
+
+from freezegun import freeze_time
 import pytest
 
 from pcapi.core.users import exceptions
@@ -48,3 +52,23 @@ class CheckUserAndCredentialsTest:
     def test_user_with_valid_password(self):
         user = factories.UserFactory.build(isActive=True)
         repository.check_user_and_credentials(user, factories.DEFAULT_PASSWORD)
+
+
+@pytest.mark.usefixtures("db_session")
+class GetNewlyEligibleUsersTest:
+    @freeze_time("2018-01-01 ")
+    def test_eligible_user(self):
+        user_already_18 = factories.UserFactory(
+            isBeneficiary=False, dateOfBirth=datetime(1999, 12, 31), dateCreated=datetime(2017, 12, 1)
+        )
+        user_just_18 = factories.UserFactory(
+            isBeneficiary=False, dateOfBirth=datetime(2000, 1, 1), dateCreated=datetime(2017, 12, 1)
+        )
+        # User not yet 18
+        factories.UserFactory(isBeneficiary=False, dateOfBirth=datetime(2000, 1, 2), dateCreated=datetime(2017, 12, 1))
+
+        # Users 18 on the day `since` should not appear, not those that are not 18 yet
+        users = repository.get_newly_eligible_users(since=date(2017, 12, 31))
+        assert set(users) == {user_just_18}
+        users = repository.get_newly_eligible_users(since=date(2017, 12, 30))
+        assert set(users) == {user_just_18, user_already_18}
